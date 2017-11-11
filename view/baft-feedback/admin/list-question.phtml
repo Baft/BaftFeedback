@@ -1,0 +1,196 @@
+<?php
+use BaftFeedback\Listener\BaftFeedbackRouteListener;
+$feedbackEntity = $this->feedback;
+$groups = $this->groups;
+?>
+
+<div class="align-left float-left">
+	<a class="btn btn-success margin"
+		href="<?php
+
+		print $this->url (  'main/general', [
+				"__NAMESPACE__" => 'BaftFeedback',
+				"controller" => 'admin',
+				'action' => 'listFeedback'
+		] );
+		?>"><?php print $this->translate('feedback list','Application');?></a>
+</div>
+
+<div class="align-right float-right ">
+	<a class="btn btn-success margin"
+		href="<?php
+
+		print $this->url (  'main/general', [
+				"__NAMESPACE__" => 'BaftFeedback',
+				"controller" => 'admin',
+				'action' => 'addQuestion'
+		], [
+				'query' => [
+						'fdbck' => $feedbackEntity->getId ()
+				]
+		] );
+		?>"><?php print $this->translate('Create Question','Application');?></a>
+
+	<a class="btn btn-success margin"
+		href="<?php
+
+		print $this->url ( 'main/general', [
+				"__NAMESPACE__" => 'BaftFeedback',
+				"controller" => 'admin',
+				'action' => 'createGroup'
+		], [
+				'query' => [
+						'fdbck' => $feedbackEntity->getId ()
+				]
+		] );
+		?>"><?php print $this->translate('Create Group','Application');?></a>
+</div>
+<div class="clear-both"></div>
+<label>
+<?php print $this->translate('search','Application');?>
+<input class="input form-control"
+	placeholder="<?php print $this->translate('search','Application');?>"
+	id="search" />
+</label>
+<div id="tree_quesitons">
+
+	<ul>
+		<li data-jstree='{ "type":"group" }'>
+			<p class='display-inline'><?php print $feedbackEntity->getLabel(); ?></p>
+			<ul>
+<?php
+
+$GCounter = 1;
+foreach ( $groups as $group ) {
+	$GCounter ++;
+	$QCounter = 1;
+	$questions = $group->getQuestions ();
+	$questionsCount = $questions->count ();
+
+	print "<li data-qorder='{$group->getOrder()}'  id='{$group->getNamespace()}'  class='group'  data-jstree='{ \"type\":\"group\" }'>";
+	print "<p class='display-inline'>";
+	print "<a  href='{$this->url( 'main/general', [
+							"__NAMESPACE__" => 'BaftFeedback',
+							"controller" => 'admin',
+							'action' => 'editGroup'
+					],['query'=>['fdbck'=>$feedbackEntity->getId() , 'g'=>$group->getId()]])}'>";
+	print $group->getLabel ();
+	print "</a>";
+	print "&nbsp;&nbsp;";
+	print "<u>( {$questionsCount} سوال)</u>";
+	print "</p>";
+
+	print "<ul>";
+
+	print "<li class='add_question font-green font-bolder ' data-jstree='{\"icon\":\"icon-plus\"}'>";
+	print "<a href='{$this->url( 'main/general', [
+			"__NAMESPACE__" => 'BaftFeedback',
+			"controller" => 'admin',
+			'action' => 'addQuestion'
+	],['query'=>['fdbck'=>$feedbackEntity->getId() , 'g'=>$group->getId()]])}'>";
+	print $this->translate ( 'Create Question', 'Application' );
+	print "</a>";
+	print "</li>";
+
+	if ($questionsCount > 0) {
+		foreach ( $questions as $question ) {
+			$QCounter ++;
+
+			print "<li id='{$question->getQuestionNamespace()}' class='question' data-qorder='{$question->getQuestionOrder()}' data-jstree='{\"icon\":\"icon-question \" , \"type\":\"question\" }' >";
+			print "<a  href='{$this->url( 'main/general', [
+							"__NAMESPACE__" => 'BaftFeedback',
+							"controller" => 'admin',
+							'action' => 'editQuestion'
+					],['query'=>['fdbck'=>$feedbackEntity->getId() , 'q'=>$question->getId()]])}'>";
+			print $question->getLabel ();
+			print "</li>";
+		}
+	}
+
+	print "</ul>"; // question list end
+
+	print "</li>";
+}
+
+?>
+
+		<!-- groups end -->
+			</ul>
+		</li>
+
+		<!-- root -->
+	</ul>
+</div>
+
+
+<?php
+$this->headscript ()->appendFile ( $this->basepath ( "metronic/scripts/plugins/jstree/dist/jstree.min.js" ) );
+$this->headlink ()->appendStylesheet ( $this->basepath ( "metronic/scripts/plugins/jstree/dist/themes/default/style.min.css" ) );
+?>
+
+<?php $this->inlinescript('script')->captureStart(); ?>
+$(function () {
+/*
+$.jstree.defaults.dnd.is_draggable= function(node){
+	var li=$('#'+node[0].id);
+	if(li.is('.add_question')) return false;
+	return true;
+};
+*/
+	$('#tree_quesitons').jstree({
+	  "core" : {
+	    "animation" : 1,
+	    "check_callback" : true,
+	    "themes" : { "stripes" : true }
+	  },
+	  "dnd" :{
+	  	"is_draggable" : function(node){
+				var li=$('#'+node[0].id);
+				if(li.is('.add_question')) return false;
+				return true;
+			}
+	  },
+	  "types" : {
+	    "#" : {
+	      "max_children" : 1,
+	      "max_depth" : 2,
+	      "valid_children" : ["root"]
+	    },
+	    "root" : {
+	      "valid_children" : ["group"]
+	    },
+	    "group" : {
+	      "valid_children" : ["question"]
+	    },
+	    "question" : {
+	      "valid_children" : []
+	    }
+	  },
+	  "plugins" : [
+	    "types", "dnd", "search", "changed", "html_data", "state",  "wholerow"
+	  ]
+	}).on("move_node.jstree", function (e, data) {
+      console.log(data); // newly selected
+      var url="<?php
+
+      print $this->url (  'main/general', [
+								"__NAMESPACE__" => 'BaftFeedback',
+								"controller" => 'admin',
+								'action' => 'moveQuestion'
+						] );
+						?>";
+      $.post(url,[{"name":"question","value":data.node.id.match(/(Q\d+)_(\d+)/)[2] } , {"name":"group","value":data.parent } , {"name":"order","value":data.position }]);
+    });
+
+	var to = false;
+	$('#search').keyup(function () {
+	    if(to) { clearTimeout(to); }
+	    to = setTimeout(function () {
+	      var v = $('#search').val();
+	      if(v.length >= 2)
+	      	$('#tree_quesitons').jstree(true).search(v);
+	    }, 250);
+	});
+});
+<?php $this->inlinescript('script')->captureEnd(); ?>
+

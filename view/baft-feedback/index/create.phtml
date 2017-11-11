@@ -1,0 +1,64 @@
+<?php
+use BaftFeedback\Listener\BaftFeedbackRouteListener;
+use Zend\Form\Element\Submit;
+
+$feedback = $this->feedback;
+
+$this->headTitle ( $feedback->getLabel () );
+?>
+<div class="row  bg-blue-hoki">
+
+	<div class="col-md-10 col-md-offset-1">
+
+		<div id="feedback_checklist">
+
+			<div class="portlet box  green margin-top">
+				<div class="portlet-title">
+					<div class="caption">
+						<i class="fa  fa-list-ul "></i>
+							<?php print $feedback->getLabel();?>
+					</div>
+				</div>
+
+				<div class="portlet-body">
+				<?php
+				$subjectForm = $this->baftFeedbackSubjectForm ( $feedback );
+				
+				$subjectForm->setOptions ( [ 
+						'form_attributes' => [ 
+								'action' => '',
+								'method' => 'POST' 
+						] 
+				] );
+				$form = $subjectForm->getForm ();
+				
+				// if feedback has any subject
+				if ($form) {
+					
+					$form->setAttributes ( [ 
+							'class' => 'color-black' 
+					] );
+					
+					$form->get ( 'submit' )->setAttributes ( [ 
+							'class' => 'btn btn-success margin-top float-left',
+							'id' => 'submit-comment' 
+					] )->setValue ( 'submit' );
+					
+					$form->prepare ();
+					
+					echo $this->form ()->openTag ( $form );
+					
+					echo $this->formCollection ( $form );
+					
+					echo $this->form ()->closeTag ();
+				}
+				?>
+				</div>
+			</div>
+
+
+		</div>
+
+
+	</div>
+</div>
