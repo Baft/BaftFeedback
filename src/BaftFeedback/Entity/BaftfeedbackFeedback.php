@@ -175,6 +175,16 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 	 * @var integer @ORM\Column(name="`deleted`", type="integer", nullable=true, options={"default":0})
 	 *
 	 *      @ZendForm\Exclude()
+	 *
+	 *      @ZendForm\Type("checkbox")
+	 *      @ZendForm\Attributes({"value":"0" })
+	 *      @ZendForm\AllowEmpty()
+	 *      @ZendForm\Options({
+	 *      "label":"delete",
+	 *      "use_hidden_element" : "false",
+	 *      "checked_value" : "1",
+	 *      "unchecked_value" : "0"
+	 *      })
 	 */
 	private $deleted;
 
@@ -242,6 +252,9 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 	/**
 	 *
 	 * @var \Doctrine\Common\Collections\ArrayCollection  @ORM\OneToMany(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackVersion", mappedBy="refBaftfeedbackFeedback")
+	 *
+	 *      @ZendForm\Exclude()
+	 *
 	 */
 	private $versions;
 
