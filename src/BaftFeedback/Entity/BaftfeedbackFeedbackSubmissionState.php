@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  * @ORM\Cache(usage="NONSTRICT_READ_WRITE")
  */
 class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface {
-	
+
 	/**
 	 *
 	 * @var integer @ORM\Column(name="id", type="integer", nullable=false)
@@ -23,25 +23,25 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	 *      @ORM\GeneratedValue(strategy="IDENTITY")
 	 */
 	private $id;
-	
+
 	/**
 	 *
 	 * @var integer @ORM\Column(name="state", type="integer", nullable=true)
 	 */
 	private $state;
-	
+
 	/**
 	 *
 	 * @var string @ORM\Column(name="version", type="string", length=255, nullable=true)
 	 */
 	private $version;
-	
+
 	/**
 	 *
 	 * @var string @ORM\Column(name="description", type="text", nullable=true)
 	 */
 	private $description;
-	
+
 	/**
 	 *
 	 * @var \BaftFeedback\Entity\BaftfeedbackFeedbackSubmission @ORM\ManyToOne(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackSubmission" )
@@ -50,20 +50,26 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	 *      })
 	 */
 	private $refBaftfeedbackFeedbackSubmissionId;
-	
+
 	/**
 	 *
 	 * @var string @ORM\Column(name="json_state_data", type="text", nullable=true)
 	 */
 	private $jsonStateData;
-	
+
 	/**
 	 *
 	 * @var string @ORM\Column(name="change_time", type="string", length=255, nullable=true)
 	 */
 	private $changeTime;
 
-	
+	/**
+	 *
+	 * @var string @ORM\Column(name="duration_time", type="string", length=255, nullable=true)
+	 */
+	private $durationTime;
+
+
 	/**
 	 *
 	 * @return integer
@@ -71,29 +77,9 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getId() {
 
 		return $this->id;
-	
-	}
-
-	/**
-	 * Set state change time
-	 *
-	 * @param string $changeTime        	
-	 *
-	 * @return BaftfeedbackFeedbackSubmissionState
-	 */
-	function setChangeTime() {
 
 	}
 
-	/**
-	 *
-	 * @return string
-	 */
-	function getChangeTime() {
-
-		return $this->changeTime;
-	
-	}
 
 	/**
 	 *
@@ -102,34 +88,34 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getState() {
 
 		return $this->state;
-	
+
 	}
 
 	/**
 	 *
-	 * @param integer $state        	
+	 * @param integer $state
 	 * @return BaftfeedbackFeedbackSubmissionState
 	 */
 	public function setState($state) {
 
 		$this->state = $state;
 		return $this;
-	
+
 	}
 
 	/**
 	 * Set version
 	 *
-	 * @param string $version        	
+	 * @param string $version
 	 *
 	 * @return BaftfeedbackFeedbackSubmissionState
 	 */
 	public function setVersion($version) {
 
 		$this->version = $version;
-		
+
 		return $this;
-	
+
 	}
 
 	/**
@@ -140,7 +126,7 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getVersion() {
 
 		return $this->version;
-	
+
 	}
 
 	/**
@@ -150,7 +136,7 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getRefBaftfeedbackFeedbackSubmissionId() {
 
 		return $this->refBaftfeedbackFeedbackSubmissionId;
-	
+
 	}
 
 	/**
@@ -163,7 +149,7 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 
 		$this->refBaftfeedbackFeedbackSubmissionId = $refBaftfeedbackFeddbackSubmissionId;
 		return $this;
-	
+
 	}
 
 	/**
@@ -173,19 +159,19 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getDescription() {
 
 		return $this->description;
-	
+
 	}
 
 	/**
 	 *
-	 * @param string $description        	
+	 * @param string $description
 	 * @return BaftfeedbackFeedbackSubmissionState
 	 */
 	public function setDescription($description) {
 
 		$this->description = $description;
 		return $this;
-	
+
 	}
 
 	/**
@@ -195,20 +181,60 @@ class BaftfeedbackFeedbackSubmissionState implements BaftFeedbackEntityInterface
 	public function getJsonStateData() {
 
 		return $this->jsonStateData;
-	
+
 	}
 
 	/**
 	 *
-	 * @param string $jsonStateData        	
+	 * @param string $jsonStateData
 	 * @return BaftfeedbackFeedbackSubmissionState
 	 */
 	public function setJsonStateData($jsonStateData) {
 
 		$this->jsonStateData = $jsonStateData;
 		return $this;
-	
+
 	}
+
+	/**
+	 *
+	 * @return string
+	 */
+	function getChangeTime() {
+
+		return $this->changeTime;
+
+	}
+
+
+	/**
+	 * @param string $changeTime
+	 */
+	public function setChangeTime($changeTime) {
+
+		$this->changeTime = $changeTime;
+		return $this;
+	}
+
+	/**
+	 * @return the $durationTime
+	 */
+	public function getDurationTime() {
+
+		return $this->durationTime;
+	}
+
+	/**
+	 * @param string $durationTime
+	 */
+	public function setDurationTime($durationTime) {
+
+		$this->durationTime = $durationTime;
+		return $this;
+	}
+
+
+
 
 
 }

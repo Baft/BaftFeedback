@@ -159,61 +159,15 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 	// #################################################################
 	// #################################################################
 
-	/**
-	 * check if feedback has any period or interval
-	 * @param  \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
-	 * @return bool|string
-	 */
-	public function hasInterval(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity){
-		if(!empty($feedbackEntity->getIntervalTime()))
-				return $feedbackEntity->getIntervalTime();
-		return false;
-
-	}
-
-	/**
-	 * is currently declined respite time
-	 * RESPITE	 : return 0 = it is in respite span
-	 * EXPIRED   : return 1 = declined expire time
-	 * PREMATURE : return 2 = it dose not reach to respite span
-	 * @param array $respiteTime
-	 * @param int $now current time or specific time in future or past to check with repsite time
-	 * @return int
-	 */
-	public function isExpiredRespiteTime($respiteTime,$now=null){
-
-		if($respiteTime===false)
-			return 1;
-
-		if($now==null)
-			$now=time();
-
-		$availableTime=$respiteTime['available_time'];
-		$expireTime=$respiteTime['expire_time'];
-
-		// in span (RESPITE)
-		if($availableTime <= $now && $now < $expireTime)
-			return 0;
-
-		// greater than span (EXPIRED)
-		if($expireTime < $now)
-			return 1;
-
-		//less than span (PREMATURE)
-		if($availableTime > $now)
-			return 2;
-
-		return 1;
-	}
 
 	/**
 	 * بازه ی زمانیی برای فرم که باید زمان همه ی سابمیشن(ثبت فرم)ها در بازه ی ان قرار داشته باشد که به عنوان مهلت از ان یاد می شود
 	 * get currentRespiteTime (default).
 	 * get list of respiteTimeS on $currentRespiteTime=false .
 	 * get false if can not calculate new respiteTime :
-	 * 		1-set fixed respite
-	 * 		2-error occured
-	 * 		3-no any more respiteTime exists(fixed expireTime or end of calculation)
+	 * 1-set fixed respite
+	 * 2-error occured
+	 * 3-no any more respiteTime exists(fixed expireTime or end of calculation)
 	 * interval_id = start of interval time span
 	 *
 	 *
@@ -221,14 +175,14 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 	 * @param boolean $currentRespiteTime
 	 * @return array|false [available_time,expire_time,interval_id]
 	 */
-	public function getRespiteTime($feedbackEntity,$currentRespiteTime=true){
+	public function __getRespiteTime($feedbackEntity, $currentRespiteTime = true) {
 
-		$packRespite=function($start,$end,$priodId){
+		$packRespite = function ($start, $end, $priodId) {
 			return [
-					"available_time" => $start ,
-					"expire_time" => $end ,
+					"available_time" => $start,
+					"expire_time" => $end,
 					"interval_id" => $priodId
-					];
+			];
 		};
 
 		$feedbackEntity = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\feedback' )->find ( $feedbackEntity );
@@ -242,55 +196,54 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 		$periodTime = $feedbackEntity->getIntervalTime ();
 
 		$jdf = new jdf ();
-		$currentJYear = $jdf->jgetdate($currentTime)['year'];//gregorian_to_jalali ( $currentYear, 01, 01 ) [0];
+		$currentJYear = $jdf->jgetdate ( $currentTime ) ['year']; // gregorian_to_jalali ( $currentYear, 01, 01 ) [0];
 
 		// start of "farvardin" to gregorian
-		if($availableTime==0){
+		if ($availableTime == 0) {
 			$availableTime = $jdf->jalali_to_gregorian ( $currentJYear, 1, 1 );
 			// to timestamp
 			$availableTime = mktime ( 0, 0, 0, $availableTime [1], $availableTime [2], $availableTime [0] );
 		}
 
 		// enf of "esfand" to gregorian
-		if($expireTime==0){
+		if ($expireTime == 0) {
 			$expireTime = $jdf->jalali_to_gregorian ( $currentJYear, 12, $jdf->monthDayNumber ( 12, $currentJYear ) );
 			// to timestamp
 			$expireTime = mktime ( 0, 0, 0, $expireTime [1], $expireTime [2], $expireTime [0] );
 		}
 
-		if ( empty ( $periodTime ) )
-			return $packRespite( $availableTime , $expireTime , "fix_{$availableTime}");
+		if (empty ( $periodTime ))
+			return $packRespite ( $availableTime, $expireTime, "fix_{$availableTime}" );
 
 		// period is dose not valid
-		if (!is_string ( $periodTime ))
+		if (! is_string ( $periodTime ))
 			return false;
 
 		// period is set?
 		$interval = new \DateInterval ( $periodTime );
 		$datePeriod = new \DatePeriod ( new \DateTime ( '@' . $availableTime ), $interval, new \DateTime ( '@' . $expireTime ) );
 
-		$periodArray = iterator_to_array($datePeriod);
-		var_dump($periodArray,$periodTime,date("Y m d",$availableTime),date("Y m d",$expireTime));
+		$periodArray = iterator_to_array ( $datePeriod );
+		var_dump ( $periodArray, $periodTime, date ( "Y m d", $availableTime ), date ( "Y m d", $expireTime ) );
 
-		$periodesRange=[];
+		$periodesRange = [ ];
 		foreach ( $periodArray as $num => $date ) {
 			$periodStart = $date->getTimestamp ();
 
-			if((!$nextPeriod=each($periodArray)['value']) || (false && prev($periodArray)) )
-				$nextPeriod=$datePeriod->end;
+			if ((! $nextPeriod = each ( $periodArray ) ['value']) || (false && prev ( $periodArray )))
+				$nextPeriod = $datePeriod->end;
 
-			$periodEnd=$nextPeriod->getTimeStamp();
+			$periodEnd = $nextPeriod->getTimeStamp ();
 
-			$periodesRange [] = $packRespite($periodStart , $periodEnd-1 ,"{$periodTime}_{$num}_{$periodStart}");
-
+			$periodesRange [] = $packRespite ( $periodStart, $periodEnd - 1, "{$periodTime}_{$num}_{$periodStart}" );
 		}
-		//return list of priodes range
-		if(!$currentRespiteTime)
+		// return list of priodes range
+		if (! $currentRespiteTime)
 			return $periodesRange;
 
-		//find current respiteTime on flag $currentRespiteTime=true
-		foreach ($periodesRange as $period ) {
-			if($period['available_time'] <= $currentTime &&  $currentTime < $period['expire_time']  )
+		// find current respiteTime on flag $currentRespiteTime=true
+		foreach ( $periodesRange as $period ) {
+			if ($period ['available_time'] <= $currentTime && $currentTime < $period ['expire_time'])
 				return $period;
 		}
 
@@ -298,24 +251,190 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 
 	}
 
+
 	/**
-	 * calculate submission respite time (startTime,endTime) base of current (use case in creating new submission).
+	 * check if feedback has any period or interval
 	 *
-	 * 	1-if "availableTime" , "expireTime" , "durationTime" set fixed
-	 * 		1- priod is set : ref to 2-2 & 2-1.
-	 * 		2- duratin time is set : checklist available till duration in span of [availableTime , expireTime].
-	 *  2-"priodic" & "repeat" are arguments to generate dynamic "availableTime" & "expireTime" & "durationTime".
-	 *  	1- To generate base of "priodTime" (1-with availableTime) : generate (time spans) base of priodTime starting from availableTime.
-	 *  	2- To generate base of "priodTime" (1-with availableTime & expirtime) : generate (time spans) , calculating time spans just in span of [availableTime , expireTime] .
-	 *  	3- To generate base of "priodTime" (2-no availableTime) : generate (time spans) base of priodTime starting from start of each year .
-	 *  	4- (depricated: can be defined using priodTime only)To generate base of "repeat" : priodTime have to defined , generate (time spans) base of calculating priodTime/repeatTime.
-	 * period time is ISO_8601 : https://en.wikipedia.org/wiki/ISO_8601#Durations
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @return bool|string
+	 */
+	public function hasInterval(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity) {
+
+		if (! empty ( $feedbackEntity->getIntervalTime () ))
+			return $feedbackEntity->getIntervalTime ();
+		return false;
+
+	}
+
+	/**
+	 * is currently declined respite time
+	 * RESPITE : return 0 = it is in respite span
+	 * EXPIRED : return 1 = declined expire time
+	 * PREMATURE : return 2 = it dose not reach to respite span
 	 *
-	 * @param
-	 *        	\BaftFeedback\Entity\BaftfeedbackFeedback | int $feedbackEntity
+	 * @param array $respiteTime
+	 * @param int $now
+	 *        	current time or specific time in future or past to check with repsite time
 	 * @return int
 	 */
-	public function _calculateRespiteTime($feedbackEntity) {
+	public function isExpiredRespiteTime($respiteTime, $now = null) {
+
+		if ($respiteTime === false)
+			return 1;
+
+		if ($now == null)
+			$now = time ();
+
+		$availableTime = $respiteTime ['available_time'];
+		$expireTime = $respiteTime ['expire_time'];
+
+		// in span (RESPITE)
+		if ($availableTime <= $now && $now < $expireTime)
+			return 0;
+
+		// greater than span (EXPIRED)
+		if ($expireTime < $now)
+			return 1;
+
+		// less than span (PREMATURE)
+		if ($availableTime > $now)
+			return 2;
+
+		return 1;
+
+	}
+
+	/**
+	 *شماره اخرین دوره
+	 * صفر به معنای شروع نشدن فبدبک
+	 * یک معنای اولین دوره
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @return number
+	 */
+	public function getCurrentPeriodNumber(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity) {
+
+		$repeatable=$feedbackEntity->getRepeat();
+		if(!$repeatable)
+			return 1;
+
+		$currentTime=time();
+		$availableTime=$feedbackEntity->getAvailableTime();
+		$intervalTime = $feedbackEntity->getIntervalTime ();
+		$durationTime = $this->getDurationTime ( $feedbackEntity );
+		$cuurentPeriodNumber=0;
+
+		$distanceTime=($currentTime-$availableTime<0)?-1:($currentTime-$availableTime);
+		if($distanceTime<0)
+			return $cuurentPeriodNumber;
+
+
+		$cuurentPeriodNumber=(int)ceil($distanceTime/($intervalTime+$durationTime));
+
+		return $cuurentPeriodNumber;
+
+	}
+
+	/**
+	 * مهلت برقرار فیدبک
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 */
+	public function getDurationTime(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity) {
+
+		$availableTime = $feedbackEntity->getAvailableTime ();
+		$expireTime = $feedbackEntity->getExpireTime ();
+		$durationTime = $feedbackEntity->getDurationTime ();
+
+		if($expireTime<=$availableTime)
+			throw new \Exception("feedback expire time can not before available time");
+
+		$jdf = new jdf ();
+
+		// start of "farvardin" to gregorian
+		if ($availableTime == 0) {
+			$availableTime = $jdf->getFirstOfYearUnix ();
+		}
+
+		// enf of "esfand" to gregorian
+		if ($expireTime == 0) {
+			$expireTime = $jdf->getEndOfYearUnix ();
+		}
+
+		// calculate expiretime , if $availableTime+$durationTime < $expireTime
+		$expireTime = ($availableTime + $durationTime >= $expireTime) ? $expireTime : $availableTime + $durationTime;
+
+		return $expireTime - $availableTime;
+
+	}
+
+	/**
+	 * زمان شروع دسترس پذیری فیدبک در یک دوره
+	 * زمان شروع داینامیک است که بر اساس شماره دوره محاسبه می شود
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @param string $periodNumber
+	 * @return number|string
+	 */
+	public function getAvailableTime(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity, $periodNumber = false) {
+
+		if (! $periodNumber)
+			$periodNumber = $this->getCurrentPeriodNumber ( $feedbackEntity );
+
+		$availableTime = $feedbackEntity->getAvailableTime ();
+		$intervalTime = $feedbackEntity->getIntervalTime ();
+		$durationTime = $this->getDurationTime ( $feedbackEntity );
+
+		$jdf = new jdf ();
+
+		// start of "farvardin" to gregorian
+		if ($availableTime == 0) {
+			$availableTime = $jdf->getFirstOfYearUnix ();
+		}
+
+		$periodAvailableTime = $availableTime + ($durationTime + $intervalTime) * ($periodNumber - 1);
+
+		return $periodAvailableTime;
+
+	}
+
+	/**
+	 * زمان انقضای مهلت دسترس پذیری فیدبک در یک دوره
+	 * زمان پایان داینامیک است و به زمان شروع پابسته است
+	 * چنانچه زمان پایان یک دوره ی خاص مد نظر باشد ابتدا می بایست زمان شروع ان دوره را مخاسبه کنید
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @param int $availableTime
+	 * @return number|string
+	 */
+	public function getExpireTime(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity, $availableTime) {
+
+		$durationTime = $this->getDurationTime ( $feedbackEntity );
+
+		$expireTime=$availableTime+$durationTime;
+
+		return $expireTime;
+
+	}
+
+
+	/**
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @param string $currentRespiteTime
+	 * @throws \Exception
+	 * @return unknown|NULL[]|NULL|boolean
+	 */
+	public function getRespiteTime($feedbackEntity, $periodNumber ) {
+
+		$jdf=new jdf();
+		$packRespite = function ($start, $end, $priodId) use ($jdf) {
+			return [
+					"available_time" => $jdf->jdate("Y m d - H i s",$start),
+					"expire_time" => $jdf->jdate("Y m d - H i s",$end),
+					"interval_id" => $priodId
+			];
+		};
 
 		$feedbackEntity = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\feedback' )->find ( $feedbackEntity );
 
@@ -323,68 +442,47 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 			throw new \Exception ( "method '" . __METHOD__ . "' expect parameter one to be instance of BaftfeedbackFeedback , instance of '" . gettype ( $feedbackEntity ) . "' is passed" );
 
 
-		$startTimeSpan=0;
-		$endTimeSpan=0;
+		$availableTime = $this->getAvailableTime ($feedbackEntity,$periodNumber);
+		$expireTime = $this->getExpireTime ($feedbackEntity,$availableTime);
 
-		$availableTime = $feedbackEntity->getAvailableTime ();
-		$expireTime = $feedbackEntity->getExpireTime ();
-		$periodTime = $feedbackEntity->getIntervalTime ();
+		$durationTime=$this->getDurationTime($feedbackEntity);
+		$intervalTime=$feedbackEntity->getIntervalTime();
 
-		$jdf = new jdf ();
-		$currentTime = time ();
-		$currentYear = date ( 'Y' );
-		$currentJYear = $jdf->gregorian_to_jalali ( $currentYear, 01, 01 ) [0];
+		return $packRespite ( $availableTime, $expireTime , $this->getPeriodId ($feedbackEntity,$periodNumber,$availableTime,$durationTime+$intervalTime));
 
-		// start of "farvardin" to gregorian
-		$startTimeSpan = $jdf->jalali_to_gregorian ( $currentJYear, 1, 1 );
-		// to timestamp
-		$startTimeSpan = mktime ( 0, 0, 0, $startTimeSpan [1], $startTimeSpan [2], $startTimeSpan [0] );
+	}
 
-		// enf of "esfand" to gregorian
-		$endTimeSpan = $jdf->jalali_to_gregorian ( $currentJYear, 12, $jdf->monthDayNumber ( 12, $currentJYear ) );
-		// to timestamp
-		$endTimeSpan = mktime ( 0, 0, 0, $endTimeSpan [1], $endTimeSpan [2], $endTimeSpan [0] );
+	/**
+	 * generate period id
+	 * 	{feed id}_{period number}_{available time}_{distance time}
+	 *
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @param int $periodNumber
+	 * @param int $availableTime
+	 * @param int $distanceTime is durationTime + intervalTime
+	 */
+	public function getPeriodId(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity,$periodNumber,$availableTime=null,$distanceTime=null) {
 
-		// if availableTime is set
-		if (! empty ( $availableTime ) && $availableTime > 0) {
-			$startTimeSpan = $availableTime;
+		if(is_null($availableTime))
+			$availableTime = $this->getAvailableTime ($feedbackEntity,$periodNumber);
+
+		if(is_null($distanceTime)){
+			$durationTime=$this->getDurationTime($feedbackEntity);
+			$intervalTime=$feedbackEntity->getIntervalTime();
+			$distanceTime=$durationTime+$intervalTime;
 		}
 
-		// if expireTime is set
-		if (! empty ( $expireTime ) && $expireTime > 0) {
-			$endTimeSpan = $expireTime;
-		}
+		$periodId=$feedbackEntity->getId()."_".$periodNumber."_".$availableTime."_".$distanceTime;
 
-		// period is set?
-		if (! empty ( $periodTime ) && is_string ( $periodTime )) {
+		return $periodId;
 
-			$interval = new \DateInterval ( $periodTime );
-			$datePeriod = new \DatePeriod ( new \DateTime ( '@' . $startTimeSpan ), $interval, new \DateTime ( '@' . $endTimeSpan ) );
-			$timeSpanCeil = $endTimeSpan;
+	}
 
-			$dateRange = [ ];
-			foreach ( $datePeriod as $date ) {
-				$dateRange [] = $date->getTimestamp ();
-			}
+	public function getCurrentPeriodId(\BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity) {
 
-			while ( $date = current ( $dateRange ) ) {
+		$periodNumber=$this->getCurrentPeriodNumber($feedbackEntity);
 
-				$timeSpanFloor = $date;
-
-				// set Ceil of time Span
-				($timeSpanCeil = next ( $dateRange ) and ! ($timeSpanCeil >= $endTimeSpan)) || $timeSpanCeil = $endTimeSpan;
-
-				if ($currentTime < $timeSpanCeil && $currentTime >= $timeSpanFloor) {
-					$respiteTime = $timeSpanCeil;
-					break;
-				}
-			}
-		}
-
-		return [
-				'start' => $startTimeSpan,
-				'end' => $endTimeSpan
-		];
+		return $this->getPeriodId ( $feedbackEntity ,$periodNumber);
 
 	}
 
@@ -544,6 +642,8 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 	 * @param int $questionNubmer
 	 */
 	public function getQuestion($feedback, $group, $questionNubmer) {
+
+
 		// @TODO implement getQuestion body
 	}
 
@@ -574,8 +674,8 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 		else
 			$parentGroup = $feedback->getRefBaftfeedbackQuestionGroupId ();
 
-			// @TODO do it in model to do recursivley
-			// $groups=$questionGroupModel->getChilds($parentGroup,$level);
+		// @TODO do it in model to do recursivley
+		// $groups=$questionGroupModel->getChilds($parentGroup,$level);
 		$groups = $parentGroup->getChildren ();
 
 		return $groups;
@@ -652,7 +752,7 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 		if ($groupEntity && strcasecmp ( $feedbackQuestionEntity->getRefBaftfeedbackQuestionGroup ()->getName (), $groupEntity->getName () ) != 0)
 			$feedbackQuestionEntity->setRefBaftfeedbackQuestionGroup ( $groupEntity );
 
-			// simulate Desc because higher number has higher priority in form
+		// simulate Desc because higher number has higher priority in form
 		$negativeOrder = $order * - 1;
 
 		if ($feedbackQuestionEntity->getQuestionOrder () != $negativeOrder) {
@@ -679,47 +779,22 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 	}
 
 	/**
-	 * move question across groups and order in group
+	 * change groups order
 	 *
 	 * @param BaftfeedbackQuestionGroupQuestions $feedbackQuestionEntity
 	 * @param BaftfeedbackQuestionGroup $groupEntity
 	 * @param int $order
 	 */
 	public function moveGroup($groupEntity, $order, $parentEntity = null) {
-
-		$groupModel = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\questionGroup' );
-
-		if ($groupEntity && strcasecmp ( $feedbackQuestionEntity->getRefBaftfeedbackQuestionGroup ()->getName (), $groupEntity->getName () ) != 0)
-			$feedbackQuestionEntity->setRefBaftfeedbackQuestionGroup ( $groupEntity );
-
-			// simulate Desc because higher number has higher priority in form
-		$negativeOrder = $order * - 1;
-
-		if ($feedbackQuestionEntity->getQuestionOrder () != $negativeOrder) {
-			$feedbackQuestionEntity->setQuestionOrder ( $negativeOrder );
-			// reorder of others . in this case $questins is ordered DESC list base of questionOrder (-1 , -2 , ...)
-			$questions = $feedbackQuestionEntity->getRefBaftfeedbackQuestionGroup ()->getQuestions ();
-			$replacementOrder = $negativeOrder;
-			foreach ( $questions as $question ) {
-
-				if ($question->getId () == $feedbackQuestionEntity->getId ())
-					continue;
-
-				if ($question->getQuestionOrder () <= $negativeOrder)
-					$question->setQuestionOrder ( -- $replacementOrder );
-
-				$feedbackQuestionModel->update ( $question );
-			}
-
-			$feedbackQuestionModel->update ( $feedbackQuestionEntity );
-		}
+		//	@TODO
 
 	}
 
 
 	/**
 	 * count questions of feedback
-	 * @TODO make it count question in unlimited level (currently just read till one level from parent group)
+	 *
+	 * @todo make it count question in unlimited level (currently just read till one level from parent group)
 	 */
 	public function countQuestions($feedbackId) {
 
@@ -755,6 +830,7 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 	 * @return array
 	 */
 	public function getLastVersion($feedbackId) {
+
 		// witout orm
 		// $versions=$this->feedbackVersionModel->findByFeedback($feedbackId);
 		$version = $this->feedbackVersionModel->findByFeedback ( $feedbackId )->last ();
@@ -763,28 +839,11 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 
 	}
 
-	/**
-	 *
-	 * return a time span , base of period in valley of $from-$to
-	 * and return exact time span if set number of interval ($at) eg. : 6th of period=P1M ~ 06/01-06/30
-	 *
-	 * @param string $period
-	 *        	period string
-	 * @param int $at
-	 *        	number of period , eg: 6 omin tekrar e doreh. defaul is all (null passed)
-	 * @param int $from
-	 *        	unix , calculate period from this time . default is start of year
-	 * @param int $to
-	 *        	unix , claculate period to this time . default is end of year .
-	 */
-	public function periodToTimeSpan($period, $at = null, $from = null, $to = null) {
-		// @todo implement period to time span
-	}
 
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \Zend\EventManager\EventManagerAwareInterface::setEventManager()
 	 */
@@ -804,7 +863,7 @@ class feedbackService implements ServiceLocatorAwareInterface, EventManagerAware
 
 	/**
 	 *
-	 * {@inheritDoc}
+	 * {@inheritdoc}
 	 *
 	 * @see \Zend\EventManager\EventsCapableInterface::getEventManager()
 	 */

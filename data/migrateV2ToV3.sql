@@ -41,6 +41,28 @@ ADD COLUMN `editable` INT(1) NULL DEFAULT 1 AFTER `desc`;
 
 UPDATE  `baftfeedback_feedback` SET `editable`='1' ;
 
+ALTER TABLE `baftfeedback_feedback`
+DROP COLUMN `interval_reverse_time`;
+
+ALTER TABLE `baftfeedback_feedback`
+ADD COLUMN `submission_duration` VARCHAR(255) NULL ;
+
+ALTER TABLE `baftfeedback_feedback`
+CHANGE COLUMN `continuous` `submission_continuous` INT(1) NULL DEFAULT '0' ,
+CHANGE COLUMN `simultaneous` `submission_simultaneous` INT(10) NULL DEFAULT NULL ,
+CHANGE COLUMN `submission_limit` `submission_repeat` INT(10) NULL DEFAULT NULL ;
+
+ALTER TABLE `baftfeedback_feedback`
+CHANGE COLUMN `editable` `submission_editable` INT(1) NULL DEFAULT '1' AFTER `submitter_limit`;
+
+
+ALTER TABLE `baftfeedback_feedback`
+DROP COLUMN `submitter_limit` ,
+ADD COLUMN `submission_limit` INT(10) NULL DEFAULT '0'  AFTER  `json_feedback_config` ,
+DROP COLUMN `submission_simultaneous` ,
+DROP COLUMN `submission_repeat` ,
+DROP COLUMN `submission_continuous`;
+
 
 -- ---------------------------------------------------------------------------------
 
@@ -117,6 +139,16 @@ ADD COLUMN `editable` INT(1) NULL DEFAULT 1 ;
 
 UPDATE  `baftfeedback_feedback_submission` SET `editable`='1' ;
 UPDATE  `baftfeedback_feedback_submission` SET `continuous`='1' ;
+
+ALTER TABLE `baftfeedback_feedback_submission`
+DROP COLUMN `continuous` ,
+DROP COLUMN `duration_time`;
+
+
+-- ---------------------------------------------------------------------------------
+
+ALTER TABLE `baftfeedback_feedback_submission_state`
+ADD COLUMN `duration_time` VARCHAR(255) NULL AFTER `change_time`;
 
 
 -- ---------------------------------------------------------------------------------

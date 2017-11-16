@@ -84,21 +84,26 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 	 */
 	private $desc;
 
+
 	/**
 	 *
-	 * @var integer @ORM\Column(name="`editable`", type="integer", nullable=false, options={"default":0})
-	 *
-	 *      @ZendForm\Type("checkbox")
-	 *      @ZendForm\Attributes({"value":"0"})
-	 *      @ZendForm\AllowEmpty()
-	 *      @ZendForm\Options({
-	 *      "label":"editable",
-	 *      "use_hidden_element" : "false",
-	 *      "checked_value" : "0",
-	 *      "unchecked_value" : "1"
+	 * @var \BaftFeedback\Entity\BaftfeedbackFeedbackSubject $subject @ORM\ManyToOne(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackSubject" , inversedBy="refBaftfeedbackFeedback")
+	 *      @ORM\JoinColumns({
+	 *      @ORM\JoinColumn(name="ref_subject_fieldset", referencedColumnName="id", nullable=true)
 	 *      })
+	 *
+	 *      @ZendForm\Instance("\BaftFeedback\Entity\BaftfeedbackFeedbackSubject")
+	 *      @ZendForm\Type("\DoctrineORMModule\Form\Element\EntitySelect")
+	 *      @ZendForm\Options({
+	 *      "label":"feedback subject" ,
+	 *      "target_class":"\BaftFeedback\Entity\BaftfeedbackFeedbackSubject" ,
+	 *      "property" : "label"
+	 *      })
+	 *
+	 *      @ZendForm\Flags({"priority" : "98"})
 	 */
-	private $editable;
+	private $subject;
+
 
 	/**
 	 *
@@ -191,41 +196,9 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 
 	/**
 	 *
-	 * @var integer @ORM\Column(name="continuous", type="integer", nullable=false, options={"default":0})
-	 *
-	 *      @ZendForm\Type("checkbox")
-	 *      @ZendForm\Attributes({"value":"0"})
-	 *      @ZendForm\AllowEmpty()
-	 *      @ZendForm\Options({
-	 *      "label":"continuous",
-	 *      "use_hidden_element" : "false",
-	 *      "checked_value" : "0",
-	 *      "unchecked_value" : "1"
-	 *      })
-	 */
-	private $continuous;
-
-	/**
-	 *
-	 * @var  integer @ORM\Column(name="simultaneous", type="integer", nullable=false, options={"default":0})
-	 *
-	 *      @ZendForm\Type("checkbox")
-	 *      @ZendForm\Attributes({"value":"0"})
-	 *      @ZendForm\AllowEmpty()
-	 *      @ZendForm\Options({
-	 *      "label":"simultaneous",
-	 *      "use_hidden_element" : "false",
-	 *      "checked_value" : "0",
-	 *      "unchecked_value" : "1"
-	 *      })
-	 */
-	private $simultaneous;
-
-	/**
-	 *
 	 * @var  integer @ORM\Column(name="submission_limit", type="integer", nullable=false, options={"default":0})
 	 *
-	 * 		@ZendForm\Type("checkbox")
+	 * 		@ZendForm\Type("input")
 	 *      @ZendForm\Attributes({"value":"0"})
 	 *      @ZendForm\AllowEmpty()
 	 *      @ZendForm\Options({
@@ -240,34 +213,38 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 
 	/**
 	 *
-	 * @var \BaftFeedback\Entity\BaftfeedbackFeedbackSubject $subject @ORM\ManyToOne(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackSubject" , inversedBy="refBaftfeedbackFeedback")
-	 *      @ORM\JoinColumns({
-	 *      @ORM\JoinColumn(name="ref_subject_fieldset", referencedColumnName="id", nullable=true)
-	 *      })
+	 * @var integer @ORM\Column(name="`submission_editable`", type="integer", nullable=false, options={"default":0})
 	 *
-	 *      @ZendForm\Instance("\BaftFeedback\Entity\BaftfeedbackFeedbackSubject")
-	 *      @ZendForm\Type("\DoctrineORMModule\Form\Element\EntitySelect")
+	 *      @ZendForm\Type("checkbox")
+	 *      @ZendForm\Attributes({"value":"0"})
+	 *      @ZendForm\AllowEmpty()
 	 *      @ZendForm\Options({
-	 *      "label":"feedback subject" ,
-	 *      "target_class":"\BaftFeedback\Entity\BaftfeedbackFeedbackSubject" ,
-	 *      "property" : "label"
+	 *      "label":"submission editable",
+	 *      "use_hidden_element" : "false",
+	 *      "checked_value" : "0",
+	 *      "unchecked_value" : "1"
 	 *      })
-	 *
-	 *      @ZendForm\Flags({"priority" : "98"})
 	 */
-	private $subject;
+	private $submissionEditable;
 
 	/**
 	 *
-	 * @var \BaftFeedback\Entity\BaftfeedbackFeedbackVersion $version @ZendForm\Exclude()
+	 * @var string @ORM\Column(name="submission_duration", type="string", length=255, nullable=false, options={"default":0})
+	 *
+	 *      @ZendForm\Attributes({"value":"0"})
+	 *      @ZendForm\Options({"label":"submission duration time"})
+	 *      @ZendForm\AllowEmpty()
+	 *      @ZendForm\Required(false)
 	 */
-	private $version;
+	private $submissionDuration;
+
 
 	/**
 	 *
-	 * @var \Doctrine\Common\Collections\ArrayCollection $versions @ORM\OneToMany(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackVersion", mappedBy="refBaftfeedbackFeedback")
+	 * @var \Doctrine\Common\Collections\ArrayCollection  @ORM\OneToMany(targetEntity="BaftFeedback\Entity\BaftfeedbackFeedbackVersion", mappedBy="refBaftfeedbackFeedback")
 	 */
 	private $versions;
+
 
 	public function __construct() {
 
@@ -653,68 +630,6 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 
 	}
 
-	/**
-	 *
-	 * @return \Doctrine\Common\Collections\Collection
-	 */
-	public function getVersion() {
-
-		return $this->version;
-
-	}
-
-	/**
-	 *
-	 * @param \Doctrine\Common\Collections\Collection $version
-	 */
-	public function setVersion($version) {
-
-		$this->version = $version;
-		return $this;
-
-	}
-
-	/**
-	 *
-	 * @return the integer
-	 */
-	public function getContinuous() {
-
-		return $this->continuous;
-
-	}
-
-	/**
-	 *
-	 * @param integer $continous
-	 */
-	public function setContinuous($continuous) {
-
-		$this->continuous = $continuous;
-		return $this;
-
-	}
-	/**
-	 * @return int $simultaneous
-	 */
-	public function getSimultaneous() {
-
-		return $this->simultaneous;
-	}
-
-
-
-	/**
-	 * @param int $simultaneous
-	 *  @return BaftfeedbackFeedback
-	 */
-	public function setSimultaneous($simultaneous) {
-
-		$this->simultaneous = $simultaneous;
-		return $this;
-	}
-
-
 
 	/**
 	 * @return int $submissionLimit
@@ -740,9 +655,9 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 	/**
 	 * @return the $editable
 	 */
-	public function getEditable() {
+	public function getSubmissionEditable() {
 
-		return $this->editable;
+		return $this->submissionEditable;
 	}
 
 
@@ -750,11 +665,53 @@ class BaftfeedbackFeedback implements BaftFeedbackEntityInterface {
 	/**
 	 * @param number $editable
 	 */
-	public function setEditable($editable) {
+	public function setSubmissionEditable($editable) {
 
-		$this->editable = $editable;
+		$this->submissionEditable = $editable;
 		return $this;
 	}
+	/**
+	 * @return the $submissionDurationTime
+	 */
+	public function getSubmissionDurationTime() {
+
+		return $this->submissionDurationTime;
+	}
+
+
+
+	/**
+	 * @param string $submissionDurationTime
+	 */
+	public function setSubmissionDurationTime($submissionDurationTime) {
+
+		$this->submissionDurationTime = $submissionDurationTime;
+		return $this;
+	}
+	/**
+	 * @return the $submissionDuration
+	 */
+	public function getSubmissionDuration() {
+
+		return $this->submissionDuration;
+	}
+
+
+
+	/**
+	 * @param string $submissionDuration
+	 */
+	public function setSubmissionDuration($submissionDuration) {
+
+		$this->submissionDuration = $submissionDuration;
+		return $this;
+	}
+
+
+
+
+
+
 
 
 }

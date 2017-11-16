@@ -85,11 +85,6 @@ class BaftfeedbackFeedbackSubmission implements BaftFeedbackEntityInterface {
 	 */
 	private $startTime;
 
-	/**
-	 *
-	 * @var integer @ORM\Column(name="continuous", type="integer", nullable=false, options={"default":0})
-	 */
-	private $continuous;
 
 	/**
 	 *
@@ -113,6 +108,7 @@ class BaftfeedbackFeedbackSubmission implements BaftFeedbackEntityInterface {
 	 * @ORM\Column(name="submission_period", type="string", length=255, nullable=true, options={"default":0})
 	 */
 	private $submissionPeriod;
+
 
 	function __construct() {
 
@@ -300,26 +296,7 @@ class BaftfeedbackFeedbackSubmission implements BaftFeedbackEntityInterface {
 
 	}
 
-	/**
-	 *
-	 * @return the integer
-	 */
-	public function getContinuous() {
 
-		return $this->continuous;
-
-	}
-
-	/**
-	 *
-	 * @param integer $continous
-	 */
-	public function setContinuous($continuous) {
-
-		$this->continuous = $continuous;
-		return $this;
-
-	}
 
 
 	/**

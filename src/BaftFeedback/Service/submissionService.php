@@ -20,7 +20,6 @@ use Bundle\jdf;
 use Zend\EventManager\EventInterface;
 
 class submissionService implements ServiceLocatorAwareInterface, EventManagerAwareInterface {
-
 	public $serviceLocator;
 	public $eventManager;
 
@@ -91,13 +90,11 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
                 submission.ref_baftfeedback_feedback_version_id as ref_feedback_version,
                 submission.expire_time,
                 submission.start_time ,
-                submission.continuous " . ((! empty ( $subjectfilter )) ? " , subject_data.* " : "") .
-
-		"from " .
-
-		" baftfeedback_feedback_submission as submission " .
-
-		((! empty ( $subjectfilter )) ? " , (select
+                submission.submission_period " .
+                ((! empty ( $subjectfilter )) ? " , subject_data.* " : "") .
+           "from
+				baftfeedback_feedback_submission as submission " .
+                ((! empty ( $subjectfilter )) ? " , (select
                         id as subject_data_id ,
                         ref_baftfeedback_submission_id ,
                         ref_baftfeedback_subject_id
@@ -107,16 +104,10 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
                     group by ref_baftfeedback_submission_id , ref_baftfeedback_subject_id
                     having 1=1 {$subjectfilter}
                     ) as subject_data  " : "") .
-
-		((! empty ( $submitterfilter )) ? " , baftfeedback_feedback_submitter_data as submitters" : "") .
-
-		"where
+                ((! empty ( $submitterfilter )) ? " , baftfeedback_feedback_submitter_data as submitters" : "") .
+           "where
                 submission.ref_baftfeedback_feedback_id='{$feedbackEntity->getid()}'
-                and submission.ref_baftfeedback_feedback_version_id='{$feedbackversion->getId()}' " .
-                ((! empty ( $subjectfilter )) ? " and submission.id=subject_data.ref_baftfeedback_submission_id  " : "") .
-                $timefilter .
-                $submitterfilter .
-                "group by submission.ref_baftfeedback_feedback_id , submission.id
+                and submission.ref_baftfeedback_feedback_version_id='{$feedbackversion->getId()}' " . ((! empty ( $subjectfilter )) ? " and submission.id=subject_data.ref_baftfeedback_submission_id  " : "") . $timefilter . $submitterfilter . "group by submission.ref_baftfeedback_feedback_id , submission.id
             order by id asc
                     ";
 
@@ -131,7 +122,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		$rsm->addFieldResult ( 'submission', 'submission_id', 'id' );
 		$rsm->addFieldResult ( 'submission', 'expire_time', 'expireTime' );
 		$rsm->addFieldResult ( 'submission', 'start_time', 'startTime' );
-		$rsm->addFieldResult ( 'submission', 'continuous', 'continuous' );
+		$rsm->addFieldResult ( 'submission', 'submission_period', 'submissionPeriod' );
 		$rsm->addMetaResult ( 'submission', 'feedback_id', 'ref_baftfeedback_feedback_id', true ); // ($alias, $columnName, $fieldName)
 		$rsm->addMetaResult ( 'submission', 'ref_feedback_version', 'ref_baftfeedback_feedback_version_id', true );
 
@@ -163,10 +154,12 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 	 * facade method for 'read' event on submission
 	 * find and load submission and submission data
 	 *
-	 * @param \BaftFeedback\Entity\BaftfeedbackFeedbackSubmission | BaftFeedback\Event\feedbackEvent $submission
+	 * @param
+	 *        	\BaftFeedback\Entity\BaftfeedbackFeedbackSubmission | BaftFeedback\Event\feedbackEvent $submission
 	 * @return \BaftFeedback\Entity\BaftfeedbackFeedbackSubmission
 	 */
 	public function readSubmission($submission) {
+
 		/**
 		 *
 		 * @var \BaftFeedback\Event\feedbackEvent $feedbackEvent
@@ -175,12 +168,12 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		// $feedbackEvent = $this->getServiceLocator()->get('BaftFeedback\Event\feedback');
 		$feedbackEvent->setTarget ( $submission );
 
-		if($submission instanceof EventInterface)
-			$feedbackEvent=$submission;
+		if ($submission instanceof EventInterface)
+			$feedbackEvent = $submission;
 
 		$this->getEventManager ()->trigger ( FeedbackEvent::EVENT_READ_SUBMISSION, $feedbackEvent );
 
-		return $feedbackEvent->getSubmission();
+		return $feedbackEvent->getSubmission ();
 
 	}
 
@@ -242,6 +235,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 
 		/**
 		 * convert feedbackId to feedbackEntity
+		 *
 		 * @var \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
 		 */
 		$feedbackEntity = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\feedback' )->find ( $feedback );
@@ -293,205 +287,44 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 
 	}
 
-
-	/**
-	 * calculate respite time of submission base of 3 scenario (in order)
-	 * - duration is set : return duration + submissionStartTime if earlier than expire time
-	 * - period is set (with/witout feddbackAvailableTime and FeedbackExpireTime) : return periodNumber*periodTime + (startOfYear | feedback AvailableTime)
-	 * - FeddbackAvailableTime and FeedbackExpireTime is set : return FeedbackExpireTime
-	 * method may return zero if no feedback time settings are set
-	 * period time is ISO_8601 : https://en.wikipedia.org/wiki/ISO_8601#Durations
-	 *
-	 * @todo duration~interval~intervalReverse~repeat~expireTime~continous:
-	 *
-	 *       some of these attributes also can to be set on submission locally beside of feedback entity to be overrided for each submission solely.
-	 *
-	 *       continous: (bussines rule data) (can to be set on submission locally)
-	 *       boolean , deafult = 0
-	 *       on true , can not creaet new submission unless previous submission to be closed.
-	 *       feedback submissions stay open and can be edited frequently till reach expireTime or to be closed manually .
-	 *       it is just related to submission not person or subject and time
-	 *
-	 *       repeat : (bussines rule data)
-	 *       how many time can be create/edit per unit . related to person or subject or both
-	 *       with "continous" enabled means edit and on disabled means how many time can be create
-	 *       unit is one of "[number]PS" or "[number]PP"
-	 *       "[number]PS" stand for "repeatNumber Per Subject" means "how many time permited to create/edit submission for each subjet (limited by submission count on subject only)"
-	 *       "[number]PP" stand for "repeatNumber Per Person" means "how many time permited to create/edit submission to each person (limited by submitter count on submission only) "
-	 *       "[number]PPS" stand for "repeatNumber Per Person per Subject" means "how many time permited to create/edit submission to each person for each Subject (limited ) "
-	 *       number=0 is unlimit .
-	 *       default is 0pp
-	 *       eg.: repeat=2PS and continous=1 says : submission in each subject can edit 2 time totally on this feedback.
-	 *       eg.: repeat=2PP and continous=0 says : each person can create/start 2 submission totally on this feedback.
-	 *       eg.: repeat=2PP and continous=1 says : each person can edit/companion submission 2 time
-	 *
-	 *       submitter : (bussines rule data) (can to be set on submission locally)
-	 *       number , limit submitters of each submission.
-	 *       default number=0 , unlimit editor.
-	 *       it is just related to submissions .
-	 *       number=1 meaning submission on each subject have to be have just one submitter(creator) therefore just editable by creator after create
-	 *       number>1 meaning how many person can submit(edit) on submisison after created(creator also calculated in submitters).
-	 *       eg.: number=3 says : after submission created (+1 submitter) two another person (+2 submitter) beside of creator can submit(edit) on submission
-	 *       eg.: repeat=2PP and continous=0 and number=3 says : each person can create two submission and each created submission can just to be edit by 3 person
-	 *
-	 *       expireTime : (can to be set on submission locally)
-	 *       fix time to close all submissions of this feedback.
-	 *       it is just related to submissions .
-	 *       with specified "repeat" meaning how many time submissions can create/edit till expireTime reach.
-	 *
-	 *       duration : (can to be set on submission locally)
-	 *       dynamic expireTime , so expireTime = startTime + duration
-	 *       it is just related to submission .
-	 *       conflict with expireTime so can not set duration and expireTime both on feedback together, on set both duration ignore.
-	 *
-	 *       interval OR period : (bussines rule data)
-	 *       interval specified by duration in ISO_8601 standard string : https://en.wikipedia.org/wiki/ISO_8601#Durations
-	 *       submisison remain open till end of duration time or end of interval if duration dose not set.
-	 *       submission available from interval start time.
-	 *       new submission can not create till end of interval (dose not matter submission is closed or not).
-	 *       how much time interval have to be wait to be create new submission , calculate from submissionStartTime
-	 *       ( if calculated from submitTime its cause to intervals dose not occur on fixed time eg.: on interval=P3M and duration=10day )
-	 *
-	 *       intervalReverse OR periodReverse : (bussines rule data)
-	 *       intervalReverse specified by duration in ISO_8601 standard string : https://en.wikipedia.org/wiki/ISO_8601#Durations
-	 *       can not craete submission in this intervall . after submission closed have to wait till end of interval.
-	 *       created submission in this intervalReverse remain open and editable till the end of intervalReverse and can not create new submission till time.
-	 *       intervalReverse calculat submission startTime-ExpireTime dynamically base of period in the year . eg.: in length of each 6 month or in length of each 3 month
-	 *       it is related to submissin startTime-ExpireTime in each subject not persons .
-	 *       it is overlap with continous attribute , so if set both on feedback continous ingnored.
-	 *       eg.: intervalReverse = P6M say that if a submission created in first sixth month of year ,
-	 *       it remain open and can not create a new submission in same subject and intervalReverse till second sixth month of year to be started.
-	 *       eg.: repeat=2PS and intervalReverse=P6M and duration=2month says :
-	 *       just one submission can create in sixth month and remain open in 2 month and editable 2 time by submitters
-	 *       eg.: repeat=2PP and intervalReverse=P6M :
-	 *       just one submission can create in sixth month and remain open in 2 month and editable 2 time by submitters
-	 *
-	 *
-	 *
-	 *
-	 * @param
-	 *        	\BaftFeedback\Entity\BaftfeedbackFeedback | int $feedbackEntity
-	 * @return int|bool
-	 */
-	public function __calculateExpireTime($feedbackEntity, $submissionStartTime = null) {
-
-		$feedbackEntity = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\feedback' )->find ( $feedbackEntity );
-
-		if (! $feedbackEntity instanceof \BaftFeedback\Entity\BaftfeedbackFeedback)
-			throw new \Exception ( "method '" . __METHOD__ . "' expect parameter one to be instance of BaftfeedbackFeedback , instance of '" . gettype ( $entity ) . "' is passed" );
-
-		if (is_null ( $submissionStartTime ))
-			$submissionStartTime = time ();
-
-		$availableTime = $feedbackEntity->getAvailableTime ();
-		$expireTime = ($feedbackEntity->getExpireTime ()) ?: 0;
-		$duraionTime = $feedbackEntity->getDurationTime ();
-		$periodTime = $feedbackEntity->getIntervalTime ();
-
-		$jdf = new jdf ();
-		$currentTime = time ();
-		$currentJYear = $jdf->jdate ( 'Y' );
-
-		$respiteTime = 0;
-
-		// aval farvardin to gregorian
-		$startTimeValley = $jdf->jalali_to_gregorian ( $currentJYear, 1, 1 );
-		// to timestamp
-		$startTimeValley = mktime ( 0, 0, 0, $startTimeValley [1], $startTimeValley [2], $startTimeValley [0] );
-
-		// akhare esfand to gregorian
-		$endTimeValley = $jdf->jalali_to_gregorian ( $currentJYear, 12, $jdf->monthDayNumber ( 12, $currentJYear ) );
-		// to timestamp
-		$endTimeValley = mktime ( 0, 0, 0, $endTimeValley [1], $endTimeValley [2], $endTimeValley [0] );
-
-		if (! empty ( $availableTime ) && $availableTime > 0) {
-			$startTimeValley = $availableTime;
-		}
-
-		// just availableTime and expireTime is set
-		if ($expireTime > 0) {
-			$endTimeValley = $expireTime;
-			$respiteTime = $expireTime;
-		}
-
-		// period is set
-		if ((! empty ( $periodTime )) && is_string ( $periodTime )) {
-			$interval = new \DateInterval ( $periodTime );
-			$datePeriod = new \DatePeriod ( new \DateTime ( '@' . $startTimeValley ), $interval, new \DateTime ( '@' . $endTimeValley ) );
-			$timeSpanCeil = $endTimeValley;
-
-			$dateRange = [ ];
-			foreach ( $datePeriod as $date ) {
-				$dateRange [] = $date->getTimestamp ();
-			}
-
-			// var_dump($dateRange );
-
-			while ( $date = current ( $dateRange ) ) {
-
-				$timeSpanFloor = $date;
-
-				// set Ceil of time Span
-				($timeSpanCeil = next ( $dateRange ) and ! ($timeSpanCeil >= $endTimeValley)) || $timeSpanCeil = $endTimeValley;
-
-				// var_dump("$currentTime({$jdf->jdate('Y/m/d',$currentTime)}) ($timeSpanFloor({$jdf->jdate('Y/m/d',$timeSpanFloor)}) - $timeSpanCeil({$jdf->jdate('Y/m/d',$timeSpanCeil)}))");
-
-				if ($currentTime >= $timeSpanFloor && $currentTime < $timeSpanCeil) {
-					$respiteTime = $timeSpanCeil;
-					break;
-				}
-			}
-		}
-
-		// duration is set
-		if (! empty ( $duraionTime ) && $duraionTime > 0) {
-			$endTime = $submissionStartTime + $duraionTime;
-			// if duration is less than respite time
-			if ($respiteTime > $endTime)
-				$respiteTime = $endTime;
-		}
-
-		return $respiteTime;
-
-	}
-
-	public function getExpireTime($feedbackEntity, $respiteTime=[] , $submissionStartTime = null) {
+	public function getExpireTime($feedbackEntity, $respiteTime = [], $submissionStartTime = null) {
 
 		/**
 		 *
 		 * @var \BaftFeedback\Service\feedbackService $feedbackService
 		 */
-		$feedbackService=$this->getServiceLocator ()->get ( 'BaftFeedback\Service\feedback' );
-		try{
+		$feedbackService = $this->getServiceLocator ()->get ( 'BaftFeedback\Service\feedback' );
+		try {
 			$feedbackEntity = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\feedback' )->find ( $feedbackEntity );
-		}catch(\Exception $ex){
-			throw new \Exception ( "method '" . __METHOD__ . "' expect parameter one to be instance of BaftfeedbackFeedback , instance of '" . gettype ( $feedbackEntity  ) . "' is passed" );
+		}
+		catch ( \Exception $ex ) {
+			throw new \Exception ( "method '" . __METHOD__ . "' expect parameter one to be instance of BaftfeedbackFeedback , instance of '" . gettype ( $feedbackEntity ) . "' is passed" );
 			return null;
 		}
 
 
-		if(empty($respiteTime))
-			$respiteTime=$feedbackService->getRespiteTime($feedbackEntity);
+		if (empty ( $respiteTime ))
+			$respiteTime = $feedbackService->getRespiteTime ( $feedbackEntity );
 
-		if($submissionStartTime==null)
-			$submissionStartTime=time();
+		if ($submissionStartTime == null)
+			$submissionStartTime = time ();
 
-		$respiteTimeSatrt=$respiteTime['available_time'];
-		$respiteTimeEnd=$respiteTime['expire_time'];
+		$respiteTimeSatrt = $respiteTime ['available_time'];
+		$respiteTimeEnd = $respiteTime ['expire_time'];
 
 		$jdf = new jdf ();
 
-		//so check if submission start is in respite time range
-		if($feedbackService->isExpiredRespiteTime($respiteTime , $submissionStartTime)!= 0){
-			throw new \Exception(__METHOD__ . " : submission time {$jdf->jdate('Y-m-d H:i:s',$submissionStartTime)} dose not in respite time [ {$jdf->jdate('Y-m-d H:i:s',$respiteTimeSatrt)} , {$jdf->jdate('Y-m-d H:i:s',$respiteTimeEnd)} ] range.");
+		// so check if submission start is in respite time range
+		if ($feedbackService->isExpiredRespiteTime ( $respiteTime, $submissionStartTime ) != 0) {
+			throw new \Exception ( __METHOD__ . " : submission time {$jdf->jdate('Y-m-d H:i:s',$submissionStartTime)} dose not in respite time [ {$jdf->jdate('Y-m-d H:i:s',$respiteTimeSatrt)} , {$jdf->jdate('Y-m-d H:i:s',$respiteTimeEnd)} ] range." );
 		}
 
 		$duraionTime = $feedbackEntity->getDurationTime ();
-		//if duration dose not set or duration is longer than respite time
-		if($duraionTime==0 || $submissionStartTime+$duraionTime > $respiteTimeEnd )
-			$duraionTime=$respiteTimeEnd-$submissionStartTime;
+		// if duration dose not set or duration is longer than respite time
+		if ($duraionTime == 0 || $submissionStartTime + $duraionTime > $respiteTimeEnd)
+			$duraionTime = $respiteTimeEnd - $submissionStartTime;
 
-		$expireTime=$submissionStartTime+$duraionTime;
+		$expireTime = $submissionStartTime + $duraionTime;
 
 		return $expireTime;
 
@@ -510,53 +343,52 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		 *
 		 * @var \BaftFeedback\Service\feedbackService $feedbackService
 		 */
-		$feedbackService=$this->getServiceLocator ()->get ( 'BaftFeedback\Service\feedback' );
+		$feedbackService = $this->getServiceLocator ()->get ( 'BaftFeedback\Service\feedback' );
 
 		/**
 		 *
 		 * @var \BaftFeedback\Model\SubmissionRepository $submissionModel
 		 */
-		$submissionModel=$this->getServiceLocator ()->get ( 'BaftFeedback\Model\Submission' );
+		$submissionModel = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\Submission' );
 
-		//is feedback respite overdue ? yes:can not create new submission
+		/**
+		 * limit per subject
+		 *
+		 * @var integer $submissionCreationLimit
+		 */
+		$submissionCreationLimit = $feedbackEntity->getSubmissionLimit ();
+
+		// is feedback respite overdue ? yes:can not create new submission
 		$respiteTime = $feedbackService->getRespiteTime ( $feedbackEntity );
-		if($feedbackService->isExpiredRespiteTime($respiteTime))
+		if ($feedbackService->isExpiredRespiteTime ( $respiteTime ))
 			return false;
 
 
-		//is continues ? yes: check simulatneous , no: feasible to create new submission
-		if($feedbackEntity->getContinuous()){
+		// is continues ? yes: check simulatneous , no: feasible to create new submission
 
-			$continuousSubmissions=$submissionModel->findContinuous($feedbackEntity);
+			$continuousSubmissions = $submissionModel->findContinuous ( $feedbackEntity );
 
-			//is simultaneous?
-			if($feedbackEntity->getSimultaneous()){
-
-				//unlimit simultaneous submission
-				if( $feedbackEntity->getSubmissionLimit() == 0 )
-					return true;
-
-				if($continuousSubmissions->count() < $feedbackEntity->getSubmissionLimit() )
-					return true;
-
-				return false;
-			}
-
-			//no submission exist
-			if($continuousSubmissions->count() == 0)
+			// is creation unlimited?
+			if ($submissionCreationLimit == 0)
 				return true;
 
-		}
+			if ($continuousSubmissions->count () < $submissionCreationLimit)
+				return true;
+
+
+			// no submission exist
+			if ($continuousSubmissions->count () == 0)
+				return true;
 
 		return true;
 
 	}
 
-	public function editFeasibility($submissionEntity){
+	public function editFeasibility($submissionEntity) {
 
-		//dose not continouse. so any number submission can be create simulatanusly
-		if(! $feedbackEntity->getContinuous())
+		// dose not continouse. so any number submission can be create simulatanusly
 			return true;
+
 	}
 
 	/**
@@ -569,6 +401,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		$submissionModel = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\submission' );
 
 		$currentState = $submissionModel->currentState ( $submission );
+
 		// @TODO implement next state
 	}
 
@@ -723,7 +556,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 			$fieldName = $row ['question_field_name'];
 			$fieldValue = $row ['field_value'];
 
-			if(empty($fieldValue))
+			if (empty ( $fieldValue ))
 				continue;
 
 			try {
@@ -761,30 +594,31 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 	 * get all submission data by date , submitter , question
 	 *
 	 * @param int $submissionId
-	 * @param int|array $byDate array of submit times in unixtime or (for int) just a unixtime to delegate a day (program read only "day" part of unixtime)
+	 * @param int|array $byDate
+	 *        	array of submit times in unixtime or (for int) just a unixtime to delegate a day (program read only "day" part of unixtime)
 	 * @param int $bySubmitter
 	 * @param int $byQuestion
 	 */
-	public function getSubmissionData($submissionEntity,$byDate='FALSE',$bySubmitter='FALSE',$byQuestion='FALSE'){
+	public function getSubmissionData($submissionEntity, $byDate = 'FALSE', $bySubmitter = 'FALSE', $byQuestion = 'FALSE') {
 
 		$em = $this->getServiceLocator ()->get ( 'Doctrine\ORM\EntityManager' );
 
 		$connection = $em->getConnection ();
 
-		if(is_numeric($byDate))
-			$dateCondition=" DATE_FORMAT(from_unixtime(submit_time),'%m-%d-%Y')=DATE_FORMAT(from_unixtime(@submit_time),'%m-%d-%Y') ";
-		if(is_array($byDate) ){
-			//convert php array to the correspond sql condition then enervate $byDate self (replace by "TRUE") to be used in sql
-			$dateCondition=" ( ";
-			foreach ($byDate as $submitTime){
+		if (is_numeric ( $byDate ))
+			$dateCondition = " DATE_FORMAT(from_unixtime(submit_time),'%m-%d-%Y')=DATE_FORMAT(from_unixtime(@submit_time),'%m-%d-%Y') ";
+		if (is_array ( $byDate )) {
+			// convert php array to the correspond sql condition then enervate $byDate self (replace by "TRUE") to be used in sql
+			$dateCondition = " ( ";
+			foreach ( $byDate as $submitTime ) {
 				$dateCondition .= " submit_time={$submitTime} OR ";
 			}
 			$dateCondition .= " FALSE ) ";
-			$byDate=" TRUE ";
+			$byDate = " TRUE ";
 		}
 
 
-		$selectQuery="
+		$selectQuery = "
 			set @submission_id:={$submissionEntity->getId()};
 			set @submit_time:={$byDate};
 			set @submitter:={$bySubmitter};
@@ -819,6 +653,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		$loadLastDataResult = $connection->query ( $selectQuery );
 
 		return $loadLastDataResult->fetchAll ();
+
 	}
 
 	/**
@@ -1018,12 +853,12 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		if (empty ( $submissions ))
 			return null;
 
-			// $currentMidYear=(date('n',time())>=6)?2:1;
-			// $submisstionMidYear=(date('n',end($lastSubmissions)['submit_time'])>=6)?2:1;
+		// $currentMidYear=(date('n',time())>=6)?2:1;
+		// $submisstionMidYear=(date('n',end($lastSubmissions)['submit_time'])>=6)?2:1;
 
 		// not in same mid year
-			// if($currentMidYear!=$submisstionMidYear)
-			// return null;
+		// if($currentMidYear!=$submisstionMidYear)
+		// return null;
 
 		$lastSubmission = $this->getServiceLocator ()->get ( 'BaftFeedback\Model\submission' )->find ( current ( $submissions ) ['id'] );
 
@@ -1093,7 +928,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 		if (empty ( $lastData ))
 			return [ ];
 
-			// print_r($lastData);
+		// print_r($lastData);
 
 		$formBindObject = Json::decode ( Json::encode ( $formBindObject ), Json::TYPE_ARRAY );
 		foreach ( $formBindObject as $groupName => &$group ) {
@@ -1110,7 +945,7 @@ class submissionService implements ServiceLocatorAwareInterface, EventManagerAwa
 							if ($fieldName == 'id')
 								continue;
 
-								// check array depth to be exist
+							// check array depth to be exist
 							if (isset ( $lastData [$groupId] ) && isset ( $lastData [$groupId] [$questionId] ) && isset ( $lastData [$groupId] [$questionId] [$fieldName] ))
 								$fieldValue = $lastData [$groupId] [$questionId] [$fieldName];
 						}

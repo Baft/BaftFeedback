@@ -55,7 +55,7 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 		if (is_numeric ( $entity ))
 			$entity = $em->find ( 'BaftFeedback\Entity\BaftfeedbackFeedbackSubmission', $entity );
 
-			// if not found submission
+		// if not found submission
 		if (! ($entity instanceof BaftfeedbackFeedbackSubmission))
 			return null;
 
@@ -65,16 +65,17 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 
 	/**
 	 * find open submission
-	 * 	- Continuous =1
-	 * 	- status dose not closed
-	 * 	- dose not expired
+	 * - Continuous =1
+	 * - status dose not closed
+	 * - dose not expired
 	 *
 	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
 	 */
-	public function findContinuous($feedbackEntity){
+	public function findContinuous($feedbackEntity) {
+
 		$connection = $this->getEntityManager ()->getConnection ();
 
-		$sql="select *
+		$sql = "select *
 		form baftfeedback_feedback_submission
 		where
 		ref_baftfeedback_feedback_id={$feedbackEntity->getId()} and
@@ -82,9 +83,6 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 		";
 
 		return $connection->query ( $sql );
-
-
-
 
 	}
 
@@ -107,7 +105,7 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 		if (is_numeric ( $submissionEntity ))
 			$submissionEntity = $em->find ( 'BaftFeedback\Entity\BaftfeedbackFeedbackSubmission', $submissionEntity );
 
-			// if not found submission
+		// if not found submission
 		if (! $submissionEntity)
 			return [ ];
 
@@ -194,16 +192,14 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 	}
 
 	/**
-	 * if entity pass as param then insert , then return persited object
-	 * if array padd as param then insert and return inerted id
 	 *
-	 * @param array|BaftfeedbackFeedbackSubmission $submissinEntity
-	 * @throws \Exception
-	 * @return int
+	 * @param \BaftFeedback\Entity\BaftfeedbackFeedback $feedbackEntity
+	 * @param unknown $feedbackVersion
+	 * @param unknown $expireTime
+	 * @param unknown $startTime
+	 * @return \BaftFeedback\Entity\BaftfeedbackFeedbackSubmission
 	 */
 	public function create($feedbackEntity, $feedbackVersion, $expireTime, $startTime = null) {
-
-		$em = $this->getServiceLocator ()->get ( 'Doctrine\ORM\EntityManager' );
 
 		if (is_null ( $startTime ))
 			$startTime = time ();
@@ -212,14 +208,20 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 		$submissionEntity->setRefBaftfeedbackFeedback ( $feedbackEntity )
 			->setRefBaftfeedbackFeedbackVersion ( $feedbackVersion )
 			->setExpireTime ( $expireTime )
-			->setContinuous ( $feedbackEntity->getContinuous () )
 			->setStartTime ( $startTime )
-			->setEditable($feedbackEntity->getEditable());
+			->setEditable ( $feedbackEntity->getSubmissionEditable () );
 
-		$em->persist ( $submissionEntity );
-		$em->flush ( $submissionEntity );
+		$this->save( $submissionEntity );
 
 		return $submissionEntity;
+
+	}
+
+	public function save($entity) {
+
+		$em = $this->getEntityManager ();
+		$em->persist ( $entity );
+		$em->flush ( $entity );
 
 	}
 
@@ -256,8 +258,6 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 	 */
 	public function createState($submission, $state = 0, $data = []) {
 
-		$em = $this->getServiceLocator ()->get ( 'Doctrine\ORM\EntityManager' );
-
 		$submissionEntity = $this->find ( $submission );
 
 		$data = Json::encode ( $data );
@@ -269,15 +269,16 @@ class SubmissionRepository extends EntityRepository implements ServiceLocatorAwa
 		$submissionStateEntity->setRefBaftfeedbackFeedbackSubmissionId ( $submissionEntity );
 		$submissionStateEntity->setChangeTime ( time () );
 
-		$em->persist ( $submissionStateEntity );
-		$em->flush ();
+		$this->save( $submissionStateEntity );
 
 		return $submissionStateEntity;
 
 	}
 
-	public function updateState($submission, $state , $data = []){
-		return $this->createState($submission, $state, $data);
+	public function updateState($submission, $state, $data = []) {
+
+		return $this->createState ( $submission, $state, $data );
+
 	}
 
 	public function getState($submissionId, $state) {
