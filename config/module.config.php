@@ -116,6 +116,24 @@ return array (
 				'forms_path' => 'data/feedbacks'
 		),
 
+		'translator' => array (
+				'locale' => 'ir_FA',
+				'translation_file_patterns' => array (
+						array (
+								'type' => 'phpArray',
+								'base_dir' => __DIR__ . '/../language',
+								'pattern' => '%s.php',
+								'text_domain' => __NAMESPACE__
+						),
+						array (
+								'type' => 'phpArray',
+								'base_dir' => __DIR__ . '/../language',
+								'pattern' => '%s.php',
+								'text_domain' => 'default'
+						)
+				)
+		),
+
 		'controllers' => array (
 				'invokables' => array (
 						'BaftFeedback\index' => 'BaftFeedback\Controller\indexController',
