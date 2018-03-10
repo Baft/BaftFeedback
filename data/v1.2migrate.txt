@@ -1,0 +1,20 @@
+
+
+ALTER TABLE `insp_v2`.`baftfeedback_feedback_subject_data` 
+CHANGE COLUMN `question_field_name` `field_name` VARCHAR(255) NULL DEFAULT NULL ;
+
+ALTER TABLE `insp_v2`.`baftfeedback_feedback_subject_data` 
+DROP FOREIGN KEY `fk_baftfeedback_feedback_subject_data_baftfeedback_question1`;
+ALTER TABLE `insp_v2`.`baftfeedback_feedback_subject_data` 
+DROP COLUMN `ref_baftfeedback_question_id`,
+CHANGE COLUMN `ref_baftfeedback_subject_id` `ref_baftfeedback_subject_id` INT(10) UNSIGNED NOT NULL AFTER `ref_baftfeedback_submission_id`,
+DROP INDEX `fk_baftfeedback_feedback_subject_data_baftfeedback_question_idx` ;
+
+
+ALTER TABLE `insp_v2`.`baftfeedback_feedback_subject` 
+DROP FOREIGN KEY `fk_baftfeedback_feedback_subject_baftfeedback_question1`;
+ALTER TABLE `insp_v2`.`baftfeedback_feedback_subject` 
+DROP COLUMN `question_order`,
+DROP COLUMN `ref_baftfeedback_question_id`,
+DROP INDEX `fk_baftfeedback_feedback_subject_baftfeedback_question1_idx` ;
+

@@ -1,0 +1,65 @@
+<?php
+use BaftFeedback\Listener\BaftFeedbackRouteListener;
+$feedbackEntity = $this->feedback;
+
+foreach ( $form->getElements () as &$element ) {
+	$element->setAttribute ( 'class', 'form-control' );
+	$element->setOptions ( [
+			'label_attributes' => [
+					'class' => 'display-block'
+			]
+	] );
+}
+$form->setOptions ( [
+		'form_attributes' => [
+				'enctype' => 'multipart/form-data',
+				'action' => '',
+				'method' => 'POST'
+		]
+] );
+
+$form->add ( array (
+		'name' => 'submit',
+		'attributes' => array (
+				'type' => 'submit',
+				'value' => 'send',
+				'class' => 'btn btn-success'
+		)
+) );
+?>
+
+
+<div id="feedback_checklist">
+
+			<div class="portlet box  green margin-top">
+				<div class="portlet-title">
+					<div class="caption">
+						<i class="fa  fa-list-ul "></i>
+
+					</div>
+				</div>
+
+				<div class="portlet-body">
+
+<?php
+echo $this->form ()->openTag ( $form );
+echo $this->formCollection ( $form );
+?>
+<div class="align-left float-left">
+	<a class="btn btn-success"
+		href="<?php
+
+		print $this->url (  'main/general', [
+				"__NAMESPACE__" => 'BaftFeedback',
+				"controller" => 'admin',
+				'action' => 'listFeedback'
+		] );
+		?>"><?php print $this->translate('cancel','Application');?></a>
+</div>
+<div class="clear-both"></div>
+</div>
+</div>
+</div>
+<?php
+echo $this->form ()->closeTag ();
+?>

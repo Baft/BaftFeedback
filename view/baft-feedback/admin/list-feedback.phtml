@@ -1,0 +1,113 @@
+<?php
+use BaftFeedback\Listener\BaftFeedbackRouteListener;
+?>
+
+<div id="feedback_checklist">
+
+			<div class="portlet box  green margin-top">
+				<div class="portlet-title">
+					<div class="caption">
+						<i class="fa  fa-list-ul "></i>
+							
+					</div>
+				</div>
+
+				<div class="portlet-body">
+				
+<div class="table-scrollable">
+	<table class="table table-bordered table-striped table-hover"
+		id="baftfeedback-index-checklist-report">
+		<thead>
+			<tr>
+				<th>#</th>
+				<th class='align-center'>
+								<?php print $this->translate('system name');?>
+								</th>
+				<th class='align-center'>
+									<?php print $this->translate('label');?>
+								</th>
+				<th class='align-center'>
+									<?php print $this->translate('description');?>
+								</th>
+				<th class='align-center'>
+									<?php print $this->translate('latest version description');?>
+								</th>
+				<th class='align-center' colspan='2'>
+									<?php print $this->translate('edit');?>
+								</th>
+			</tr>
+		</thead>
+		<tbody>
+
+
+				<?php
+
+
+				foreach ( $this->feedback_list as $index => $feedback ) {
+					$name = $feedback->getName ();
+					$label = $feedback->getLabel ();
+					$description = $feedback->getDesc ();
+					$id = $feedback->getId ();
+					$latestVersion = $feedback->getVersions ()->last ();
+					?>
+					<tr class="sarcode-row bg-grey" data-feedback='<?= $id ?>'>
+				<td><?php print $index+1;?></td>
+				<td><?= $name ?>
+				</td>
+				<td><a class="underline"
+					href='<?php print $this->url(BaftFeedbackRouteListener::ROUTE_NAME."/submission",[BaftFeedbackRouteListener::ROUTE_FEEDBACK_VARIABLE=>$id]) ?>'><?= $label ?></a>
+									</td>
+				<td align='center'>
+										  <?= $description?>
+									</td>
+				<td align='center'>
+										  <?= $latestVersion->getDescription()?>
+									</td>
+				<td align='center' class="font-yellow-gold font-large"><a
+					class="btn btn-warning"
+					href="<?php
+
+print $this->url ( 'main/general', [
+							"__NAMESPACE__" => 'BaftFeedback',
+							"controller" => 'admin',
+							'action' => 'editFeedback'
+					], [
+							'query' => [
+									'fdbck' => $id
+							]
+					] )?>"><?php print $this->translate('edit feedback');?></a>
+				</td>
+				<td align='center' class="font-yellow-gold font-large"><a
+					class="btn btn-sm grey-cascade"
+					href="<?php
+
+					print $this->url (  'main/general', [
+							"__NAMESPACE__" => 'BaftFeedback',
+							"controller" => 'admin',
+							'action' => 'listQuestion'
+					], [
+							'query' => [
+									'fdbck' => $id
+							]
+					] )?>"><?php print $this->translate('edit question list');?></a>
+				</td>
+			</tr>
+				<?php }?>
+
+								</tbody>
+	</table>
+</div>
+<div class="align-left">
+	<a class="btn btn-success"
+		href="<?php
+
+		print $this->url ( 'main/general', [
+				"__NAMESPACE__" => 'BaftFeedback',
+				"controller" => 'admin',
+				'action' => 'createFeedback'
+		] );
+		?>"><?php print $this->translate('Create Feedback');?></a>
+</div>
+</div>
+</div>
+</div>

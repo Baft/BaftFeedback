@@ -1,0 +1,181 @@
+<?php
+use BaftFeedback\Listener\BaftFeedbackRouteListener;
+
+// ############## init
+$jdf = new \Bundle\jdf ();
+$submissionService = $this->getHelperPluginManager ()->getServiceLocator ()->get ( 'BaftFeedback\Service\submission' );
+$feedback = $this->feedback;
+$submission = $this->submission;
+$submitters = $this->submitters;
+
+// ############## proc
+$lastSubmitter = $submitters->last ();
+
+$this->headTitle ( 'edit ' . $feedback->getLabel () );
+?>
+<div class="row  bg-blue-hoki">
+
+	<div class="col-md-10 col-md-offset-1">
+
+		<div id="feedback_checklist">
+
+
+			<div class="portlet box green margin-top">
+				<div class="portlet-title">
+					<div class="caption">
+						<i class="fa  fa-list-ul "></i> <span>
+							ویرایش
+							<?php print $feedback->getLabel();?>
+							.
+							</span> <span class="padding-right rtl align-right">
+							مهلت تا
+							<?php
+							print $jdf->set_number2persian ( 1 )->jdate ( 'y/m/d ساعت H:i:s', $submission->getExpireTime () );
+							?>
+							</span> &nbsp;&nbsp; <span class="font-thin font-mid"> ( <span
+							class="padding-right rtl align-right"> آخرین ثبت در تاریخ <u>
+        							<?php
+															print $jdf->set_number2persian ( 1 )->jdate ( 'y/m/d ساعت H:i:s', $lastSubmitter->getSubmitTime () );
+															?>
+    							</u>
+						</span> &nbsp; )
+						</span>
+
+						<div class="clear-both"></div>
+					</div>
+
+					<div class="actions tools">
+						<div class="btn-group">
+							<a aria-expanded="false"
+								class="btn green-haze btn-circle btn-sm " href="#"
+								data-toggle="dropdown" data-click="dropdown"
+								data-close-others="true"> <i class="icon-settings"></i> &nbsp; <i
+								class="fa fa-angle-down"></i>
+							</a>
+							<ul class="dropdown-menu pull-right">
+								<li><a target='_blank'
+									href="<?php
+									
+print $this->url ( BaftFeedbackRouteListener::ROUTE_NAME . '/submission/edit', [ 
+											BaftFeedbackRouteListener::ROUTE_SUBMISSION_VARIABLE => $submission->getId (),
+											BaftFeedbackRouteListener::ROUTE_FEEDBACK_VARIABLE => $feedback->getId () 
+									], [ 
+											'query' => [ 
+													'print' => 'print' 
+											] 
+									] );
+									?>"> <i class="fa fa-print"></i> چاپ
+										فرم
+								</a></li>
+							</ul>
+						</div>
+					</div>
+					<!-- end action -->
+
+					<div class="clear-both"></div>
+				</div>
+
+				<div class="portlet-body">
+
+					<div class="h4 color-black float-right">
+						<span class="display-inline-block float-right margin-left">
+							subject </span>
+					</div>
+
+
+					<div class="actions tools float-left">
+						<div class="btn-group">
+							<a aria-expanded="false"
+								class="btn green-haze btn-circle btn-sm " href="#"
+								data-toggle="dropdown" data-click="dropdown"
+								data-close-others="true"> <i class="icon-eye"></i> submitters
+								&nbsp; <i class="fa fa-angle-down"></i>
+							</a>
+							<ul class="dropdown-menu pull-right"
+								style="height: 300px; overflow: scroll; overflow-x: hidden;">
+							<?php
+							foreach ( $submitters as $submitter ) :
+								?>
+							
+							<li><a> <i class="fa fa-user"></i>
+								<?php print $jdf->set_number2persian(1)->jdate('y/m/d ساعت H:i:s',$submitter->getSubmitTime()); ?>
+								</a></li>
+							     
+							<?php
+							endforeach
+							;
+							?>
+						</ul>
+						</div>
+					</div>
+
+					<div class="clear-both"></div>
+				<?php
+				$questionsForm = $this->baftFeedbackFeedbackForm ( $feedback )->setForm ( $this->form )->setOptions ( [ 
+						'template' => "insp-feedback" . DS . "partial" . DS . "three-radio-question.phtml",
+						'form_attributes' => [ 
+								'action' => '',
+								'method' => 'POST' 
+						] 
+				] );
+				
+				if ($submissionService->isState ( $submission, \inspFeedback\Model\statesEnum::BR_CONFIRM )) {
+					$questionsForm->getForm ()->remove ( 'submit' );
+				}
+				
+				print $questionsForm;
+				?>
+
+
+				</div>
+			</div>
+
+		</div>
+	</div>
+</div>
+
+<?php $this->headscript()->appendFile($this->basepath("js/plugins/bootbox/bootbox.min.js")); ?>
+
+<?php $this->inlinescript('script')->captureStart(); ?>
+
+		function printExternal(url) {
+			var printWindow = window.open( url, 'Print', 'left=200, top=200, width=950, height=500, toolbar=0, resizable=0');
+			printWindow.addEventListener('load', function(){
+				printWindow.print();
+				printWindow.close();
+			}, true);
+		}
+		
+		$(document).ready(function() {
+
+			//disable select and save value in hidden to be able send form on submittion,subject drop at bussines
+			$("#brcode select").attr("disabled","disabled");
+			var selectReplacement=$('
+<input type="hidden" />
+').prop({'name':$("#brcode select").prop('name')}).val($("#brcode select").val());
+			$("#brcode").append(selectReplacement);
+
+			//drop other answers else ans3 when state is sarConfirm
+			<?php
+			// if( $this->submissionState==\inspFeedback\Model\statesEnum::SAR_CONFIRM ):
+			if ($submissionService->isState ( $submission, \inspFeedback\Model\statesEnum::SAR_CONFIRM )) :
+				?>
+    			$('.feedback_question').each(function(index,question){
+    			
+    				//ignore comment
+    				if($(question).hasClass('comments'))
+    					return true;
+    					
+    			    var rdo0Value=$('input[type=radio]:checked',question).val();
+
+    			    if(rdo0Value=='ans1' || rdo0Value=='ans2'){
+    				    $('input[type=radio]',question).addClass('state-locked').iCheck('disable');
+    				}
+
+    				$('textarea',question).addClass('state-locked').prop('disabled','disabled');
+    			});
+			<?php endif;?>
+
+		});
+<?php $this->inlinescript('script')->captureEnd(); ?>
+
